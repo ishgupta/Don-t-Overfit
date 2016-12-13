@@ -1,0 +1,94 @@
+---
+title: "Overfit"
+output: html_notebook
+---
+
+### 1. Load required Libraries
+```{r}
+library(readr)
+library(dplyr)
+
+```
+### 2. Data Wrangling
+
+```{r}
+overfit <- read_csv("data/overfitting.csv")
+
+glimpse(overfit)
+summary(overfit)
+
+train <- overfit %>% filter(train == 1)
+test <- overfit %>% filter(train == 0)
+
+train <- train[, -c(1:2, 5)]
+test <- test[, -c(1:2, 5)]
+
+glimpse(train)
+glimpse(test)
+
+#train$Target_Leaderboard <- factor(train$Target_Leaderboard)
+#train$Target_Practice <- factor(train$Target_Practice)
+
+#test$Target_Leaderboard <- factor(test$Target_Leaderboard)
+#test$Target_Practice <- factor(test$Target_Practice)
+
+train$Target_Leaderboard <- ifelse(train$Target_Leaderboard==0, "Class1", "Class2")
+
+
+```
+
+### 3. Create custom trainControl, and fit a glmnet model
+```{r}
+customControl = trainControl(method = "cv", number = 10, summaryFunction = twoClassSummary, classProbs = TRUE, verboseIter = TRUE)
+
+model <- train(Target_Leaderboard ~ ., data = train, method="glmnet", trControl = customControl, 
+               tuneGrid = expand.grid(alpha = 0:1, lambda = seq(0.0001, 1, length = 20)))
+
+plot(model)
+
+```
+
+### 4. Calculate predictions for Target_LeaderBoard
+```{r}
+pred <- predict(model, newdata = test)
+pred <- ifelse(pred=="Class1", 0, 1)
+
+test$Target_Leaderboard <- pred
+
+write_csv(test, file = "predictions.csv")
+
+model$results %>% filter(model$results$ROC == max(model$results["ROC"]))
+
+```
+
+### 5. Re-create training and test sets for predicting Target_Evaluate
+```{r}
+train <- overfit %>% filter(train == 1)
+test <- overfit %>% filter(train == 0)
+
+test$Target_Leaderboard <- pred
+
+glimpse(train)
+glimpse(test)
+
+train <- train[, -c(1:2)]
+test <- test[, -c(1:2)]
+
+train$Target_Evaluate <- ifelse(train$Target_Evaluate == 0, "Class1", "Class2")
+
+```
+
+### 6. Fit the Model for predicting Target_Evaluate
+```{r}
+model <- train(Target_Evaluate ~ ., data = train, method="glmnet", trControl = customControl, 
+               tuneGrid = expand.grid(alpha = 0:1, lambda = seq(0.0001, 1, length = 20)))
+
+plot(model)
+
+pred <- predict(model, newdata = test)
+pred <- ifelse(pred == "Class1", 0, 1)
+
+test$Target_Evaluate <- pred
+write_csv(test, "predictions.csv")
+```
+
