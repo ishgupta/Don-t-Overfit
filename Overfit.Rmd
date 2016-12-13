@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 ### 1. Load required Libraries
-```{r}
+```{r, message=FALSE}
 library(readr)
 library(dplyr)
 
