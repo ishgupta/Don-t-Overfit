@@ -7,7 +7,7 @@ output: html_notebook
 ```{r, message=FALSE}
 library(readr)
 library(dplyr)
-
+library(caret)
 ```
 ### 2. Data Wrangling
 
